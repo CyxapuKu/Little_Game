@@ -21,6 +21,24 @@ pygame.display.set_caption("Shmup!")
 clock = pygame.time.Clock()
 
 
+font_name = pygame.font.match_font('arial')
+def draw_text(surf, text, size, x, y):
+    font = pygame.font.Font(font_name, size)
+    text_surface = font.render(text, True, (255, 128, 0))
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (x, y)
+    surf.blit(text_surface, text_rect)
+
+
+
+def draw_shield_bar(surf, x, y, pct):
+    if pct < 0:
+        pct = 0
+    BAR_LENGTH = 200
+    BAR_HEIGHT = 10
+    fill = (pct / 100) * BAR_LENGTH
+    fill_rect = pygame.Rect(x-fill/2, y, fill, BAR_HEIGHT)
+    pygame.draw.rect(surf, GREEN, fill_rect)
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -32,6 +50,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.bottom = HEIGHT - 10
         self.speedx = 0
         self.speedy = 0
+        self.shield = 200
 
     def update(self):
         self.speedx = 0
@@ -62,12 +81,17 @@ class Player(pygame.sprite.Sprite):
         bullets.add(bullet)
 
 
+mob_list = [(30, 40), (10, 20), (50, 60), (90, 100)]
+
+
 class Mob(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((30, 40))
+        self.image = pygame.Surface(random.choice(mob_list))
         self.image.fill(RED)
         self.rect = self.image.get_rect()
+        self.radius = int(self.rect.width / 2)
+        ##pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
         self.rect.x = random.randrange(WIDTH - self.rect.width)
         self.rect.y = random.randrange(-100, -40)
         self.speedy = random.randrange(1, 8)
@@ -110,7 +134,7 @@ for i in range(N):
     all_sprites.add(m)
     mobs.add(m)
 bullets = pygame.sprite.Group()
-
+score = 0
 time = pygame.time.Clock()
 previous_time = pygame.time.get_ticks()
 
@@ -133,7 +157,9 @@ while running:
     # Обновление
     all_sprites.update()
 
-    pygame.sprite.groupcollide(mobs, bullets, True, True)
+    hits = pygame.sprite.groupcollide(mobs, bullets, True, True)
+    for hit in hits:
+        score += 100 - hit.radius
 
     if len(mobs) == 0:
         N += 1
@@ -142,13 +168,17 @@ while running:
             all_sprites.add(m)
             mobs.add(m)
 
-    hits = pygame.sprite.spritecollide(player, mobs, False)
-    if hits:
-        running = False
+    hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
+    for hit in hits:
+        player.shield -= hit.radius * 2
+        if player.shield <= 0:
+            running = False
 
     # Рендеринг
     screen.fill(BLACK)
     all_sprites.draw(screen)
+    draw_text(screen, str(score), 32, WIDTH / 2, 10)
+    draw_shield_bar(screen, 300, 5, player.shield)
     # После отрисовки всего, переворачиваем экран
     pygame.display.flip()
 
