@@ -1,9 +1,10 @@
 import pygame
 import random
+from os import path
 
 WIDTH = 600
-HEIGHT = 800
-FPS = 60
+HEIGHT = 600
+FPS = 100
 
 # Задаем цвета
 WHITE = (255, 255, 255)
@@ -17,11 +18,15 @@ YELLOW = (255, 255, 0)
 pygame.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Shmup!")
+pygame.display.set_caption("I Will Shoot You!")
 clock = pygame.time.Clock()
+snd_dir = path.join(path.dirname(__file__), 'snd')
 
-level_counter = 1
+level_counter = 20
 difficulty = 1
+boss_kill_flag = False
+pygame.mixer.music.load(path.join(snd_dir, 'Nitro Fun - New Game (Original Mix).mp3'))
+pygame.mixer.music.set_volume(0.2)
 
 font_name = pygame.font.match_font('arial')
 def draw_text(surf, text, size, x, y):
@@ -58,7 +63,7 @@ class Player(pygame.sprite.Sprite):
         self.max_shield = 200
         self.shield = 200
         self.bullet_counter = 1
-        self.bullet_speed = 10
+        self.bullet_speed = 7
         self.bullet_damage = 1
         self.bullet_cooldown = 500
 
@@ -67,13 +72,13 @@ class Player(pygame.sprite.Sprite):
         self.speedy = 0
         keystate = pygame.key.get_pressed()
         if keystate[pygame.K_a]:
-            self.speedx = -8
+            self.speedx = -6
         if keystate[pygame.K_d]:
-            self.speedx = 8
+            self.speedx = 6
         if keystate[pygame.K_w]:
-            self.speedy = -8
+            self.speedy = -6
         if keystate[pygame.K_s]:
-            self.speedy = 8
+            self.speedy = 6
         self.rect.x += self.speedx
         self.rect.y += self.speedy
         if self.rect.right > WIDTH:
@@ -82,8 +87,8 @@ class Player(pygame.sprite.Sprite):
             self.rect.left = 0
         if self.rect.top < HEIGHT/2:
             self.rect.top = HEIGHT/2
-        if self.rect.bottom > HEIGHT:
-            self.rect.bottom = HEIGHT
+        if self.rect.bottom > HEIGHT - 1:
+            self.rect.bottom = HEIGHT - 1
 
     def shoot(self):
         pewpew = pygame.sprite.Group()
@@ -115,26 +120,31 @@ mob_list = [(30, 40), (10, 20), (50, 60), (90, 100)]
 
 
 class Mob(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, x, y, spx, spy, mob_name, code):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface(random.choice(mob_list))
+        self.image = mob_name
         self.image.fill((128, 128, 128))
         self.rect = self.image.get_rect()
         self.radius = int(self.rect.width / 2)
         ##pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
-        self.rect.x = random.randrange(WIDTH - self.rect.width)
-        self.rect.y = random.randrange(-100, -40)
-        self.speedy = random.randrange(1, 8) * difficulty / 4 + 1
-        self.speedx = random.randrange(-3, 3) * difficulty / 4 + 1
+        self.rect.x = x
+        self.rect.y = y
+        self.speedy = spy
+        self.speedx = spx
         self.health = self.radius / 20 * difficulty
+        self.check_code = code
 
     def update(self):
         self.rect.x += self.speedx
         self.rect.y += self.speedy
-        if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 20:
-            self.rect.x = random.randrange(WIDTH - self.rect.width)
-            self.rect.y = random.randrange(-100, -40)
-            self.speedy = random.randrange(1, 8) * difficulty / 4 + 1
+        if self.rect.top > HEIGHT + 20 or self.rect.left < -50 or self.rect.right > WIDTH + 50:
+            if self.check_code == 0:
+                self.rect.x = random.randrange(100, 500)
+                self.rect.y = random.randrange(-100, -40)
+                self.speedy = random.randrange(1, 6) * difficulty / 3 + 1
+            else:
+                self.kill()
+
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -175,6 +185,113 @@ class Buff(pygame.sprite.Sprite):
             self.kill()
 
 
+class Big_Boss(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((60, 50))
+        self.image.fill(RED)
+        self.rect = self.image.get_rect()
+        self.rect.center = (WIDTH/2, HEIGHT/4)
+        self.health = 500
+        self.time = pygame.time.get_ticks()
+        self.period = 0
+        self.tic = 0
+    def update(self):
+        if self.period == 0:
+            if pygame.time.get_ticks() - self.time >= 780:
+                self.period += 1
+                self.tic = pygame.time.get_ticks()
+                self.teleport()
+                self.round_attack()
+                self.time = self.tic
+        elif self.period == 1:
+            if pygame.time.get_ticks() - self.time < 14130:
+                if pygame.time.get_ticks() - self.tic >= 650:
+                    self.tic = pygame.time.get_ticks()
+                    self.teleport()
+                    self.round_attack()
+            elif pygame.time.get_ticks() - self.time >= 14370:
+                self.tic = pygame.time.get_ticks()
+                self.arrow()
+                self.time = self.tic
+                self.period += 1
+        elif self.period == 2:
+            if pygame.time.get_ticks() - self.time < 7470:
+                if pygame.time.get_ticks() - self.time >= 570:
+                    if pygame.time.get_ticks() - self.tic >= 460:
+                        self.tic = pygame.time.get_ticks()
+                        self.teleport()
+                        self.round_attack()
+            else:
+                self.tic = pygame.time.get_ticks()
+                self.arrow()
+                self.time = self.tic
+                self.period += 1
+        elif self.period == 3:
+            if pygame.time.get_ticks() - self.time < 7700:
+                if pygame.time.get_ticks() - self.time >= 510:
+                    if pygame.time.get_ticks() - self.tic >= 650:
+                        self.tic = pygame.time.get_ticks()
+                        self.teleport()
+                        self.round_attack()
+            else:
+                self.image = pygame.Surface((80, 70))
+                self.image.fill(RED)
+                self.tic = pygame.time.get_ticks()
+                self.time = self.tic
+                self.period += 1
+        elif self.period == 4:
+            if pygame.time.get_ticks() - self.time < 7700:
+                if pygame.time.get_ticks() - self.time >= 510:
+                    if pygame.time.get_ticks() - self.tic >= 660:
+                        self.tic = pygame.time.get_ticks()
+                        self.teleport()
+                        self.round_attack()
+
+
+
+
+
+
+
+    def arrow(self):
+        pewpew = pygame.sprite.Group()
+        player_x_center = player.rect.centerx
+        player_y_center = player.rect.bottom
+        m_center = Mob(player_x_center, player_y_center - 400, 0, 2, pygame.Surface((30, 40)), 1)
+        m_right_1 = Mob(player_x_center + 50, player_y_center - 450, 0, 2, pygame.Surface((30, 40)), 1)
+        m_left_1 = Mob(player_x_center - 50, player_y_center - 450, 0, 2, pygame.Surface((30, 40)), 1)
+        m_right_2 = Mob(player_x_center + 100, player_y_center - 500, 0, 2, pygame.Surface((30, 40)), 1)
+        m_left_2 = Mob(player_x_center - 100, player_y_center - 500, 0, 2, pygame.Surface((30, 40)), 1)
+        pewpew.add([m_center, m_right_1, m_left_1, m_right_2, m_left_2])
+        all_sprites.add(pewpew)
+        mobs.add(pewpew)
+
+    def teleport(self):
+        self.rect.center = (random.randrange(25, WIDTH-25), random.randrange(30, HEIGHT / 4))
+
+
+    def round_attack(self):
+        pewpew = pygame.sprite.Group()
+        m_center = Mob(self.rect.centerx, self.rect.centery + 20, 0, 3, pygame.Surface((10, 20)), 1)
+        m_right_1 = Mob(self.rect.centerx, self.rect.centery + 20, 1, 3, pygame.Surface((10, 20)), 1)
+        m_left_1 = Mob(self.rect.centerx, self.rect.centery + 20, -1, 3, pygame.Surface((10, 20)), 1)
+        m_right_2 = Mob(self.rect.centerx, self.rect.centery + 20, 2, 3, pygame.Surface((10, 20)), 1)
+        m_left_2 = Mob(self.rect.centerx, self.rect.centery + 20, -2, 3, pygame.Surface((10, 20)), 1)
+        m_right_3 = Mob(self.rect.centerx, self.rect.centery + 20, 3, 3, pygame.Surface((10, 20)), 1)
+        m_left_3 = Mob(self.rect.centerx, self.rect.centery + 20, -3, 3, pygame.Surface((10, 20)), 1)
+        pewpew.add([m_center, m_right_1, m_left_1, m_right_2, m_left_2, m_left_3, m_right_3])
+        all_sprites.add(pewpew)
+        mobs.add(pewpew)
+
+
+
+
+
+
+
+
+
 all_sprites = pygame.sprite.Group()
 player = Player()
 all_sprites.add(player)
@@ -182,7 +299,8 @@ mobs = pygame.sprite.Group()
 buffs = pygame.sprite.Group()
 N = 8
 for i in range(N):
-    m = Mob()
+    mob_type = pygame.Surface(random.choice(mob_list))
+    m = Mob(random.randrange(100, 500), random.randrange(-100, -40),  (random.randrange(-2, 4) * difficulty / 3) , (random.randrange(1, 6) * difficulty / 3 + 1) , pygame.Surface(random.choice(mob_list)),0)
     all_sprites.add(m)
     mobs.add(m)
 bullets = pygame.sprite.Group()
@@ -192,7 +310,7 @@ previous_time = pygame.time.get_ticks()
 
 # Цикл игры
 running = True
-while running:
+while running and level_counter < 20:
     # Держим цикл на правильной скорости
     clock.tick(FPS)
     # Ввод процесса (события)
@@ -207,16 +325,6 @@ while running:
             player.shoot()
             previous_time = current_time
 
-    if keystate[pygame.K_5]:
-        player.bullet_counter = 5
-    if keystate[pygame.K_4]:
-        player.bullet_counter = 4
-    if keystate[pygame.K_3]:
-        player.bullet_counter = 3
-    if keystate[pygame.K_2]:
-        player.bullet_counter = 2
-    if keystate[pygame.K_1]:
-        player.bullet_counter = 1
     # Обновление
     all_sprites.update()
 
@@ -233,19 +341,17 @@ while running:
                     all_sprites.add(buff)
                     buffs.add(buff)
 
-    ##hits = pygame.sprite.groupcollide(mobs, bullets, True, True)
-    ##for hit in hits:
-    ##    score += 100 - hit.radius
 
 
     if len(mobs) == 0:
         N += 1
         level_counter += 1
         if level_counter % 10 == 0:
-            difficulty += 2
+            difficulty += 1
             N = 8
         for i in range(N):
-            m = Mob()
+            m = Mob(random.randrange(100, 500), random.randrange(-100, -40), (random.randrange(-2, 4) * difficulty / 3),
+                    (random.randrange(1, 6) * difficulty / 3 + 1), pygame.Surface(random.choice(mob_list)),0)
             all_sprites.add(m)
             mobs.add(m)
 
@@ -263,8 +369,8 @@ while running:
             else:
                 hit.type = 'shield'
         elif hit.type == 'more_speed':
-            if player.bullet_speed < 30:
-                player.bullet_speed += 10
+            if player.bullet_speed < 28:
+                player.bullet_speed += 7
             else:
                 hit.type = 'shield'
         elif hit.type == 'more_damage':
@@ -295,18 +401,74 @@ while running:
 
     # После отрисовки всего, переворачиваем экран
     pygame.display.flip()
-    if score >= 50000:
-        running = False
 
+big_boy = Big_Boss()
+all_sprites.add(big_boy)
+for mob in mobs:
+    mob.kill()
+pygame.mixer.music.play(loops=-1)
+
+while running and level_counter == 20:
+    clock.tick(FPS)
+    # Ввод процесса (события)
+    for event in pygame.event.get():
+        # проверка для закрытия окна
+        if event.type == pygame.QUIT:
+            running = False
+    keystate = pygame.key.get_pressed()
+    if keystate[pygame.K_SPACE]:
+        current_time = pygame.time.get_ticks()
+        if current_time - previous_time > player.bullet_cooldown:
+            player.shoot()
+            previous_time = current_time
+
+
+
+    # Обновление
+    all_sprites.update()
+
+
+    for asteroid in mobs:
+        hits = pygame.sprite.spritecollide(asteroid, bullets, True, pygame.sprite.collide_circle)
+        for hit in hits:
+            asteroid.health -= hit.damage
+            if asteroid.health <= 0:
+                asteroid.kill()
+                score += asteroid.radius * difficulty
+
+    hits = pygame.sprite.spritecollide(big_boy, bullets, True, pygame.sprite.collide_circle)
+    for hit in hits:
+        big_boy.health -= hit.damage
+        if big_boy.health <= 0:
+            big_boy.kill()
+            boss_kill_flag = True
+            running = False
+
+
+
+    hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
+    for hit in hits:
+        player.shield -= hit.radius * 2
+        if player.shield <= 0:
+            running = False
+
+    screen.fill(BLACK)
+    all_sprites.draw(screen)
+    draw_text(screen, str(score), 32, WIDTH / 2, 10)
+    draw_shield_bar(screen, 300, 5, player.shield, player.max_shield)
+    draw_text(screen, 'BIIIIG_BOY', 32, WIDTH / 2, HEIGHT / 2)
+
+    # После отрисовки всего, переворачиваем экран
+    pygame.display.flip()
 
 
 screen.fill(BLACK)
-if score < 50000:
+if boss_kill_flag:
     for i in range(3000):
-        draw_text(screen, 'YOU LOSE', 32, WIDTH / 2, HEIGHT/2)
+        draw_text(screen, 'YOU WIN', 32, WIDTH / 2, HEIGHT/2)
         pygame.display.flip()
 else:
     for i in range(3000):
-        draw_text(screen, 'YOU WIN', 32, WIDTH / 2, HEIGHT/2)
+        draw_text(screen, 'YOU LOSE', 32, WIDTH / 2, HEIGHT/2)
         pygame.display.flip()
 pygame.quit()
