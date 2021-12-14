@@ -25,7 +25,7 @@ snd_dir = path.join(path.dirname(__file__), 'snd')
 level_counter = 20
 difficulty = 1
 boss_kill_flag = False
-pygame.mixer.music.load(path.join(snd_dir, 'Nitro Fun - New Game (Original Mix).mp3'))
+# pygame.mixer.music.load(path.join(snd_dir, 'Nitro Fun - New Game (Original Mix).mp3'))
 pygame.mixer.music.set_volume(0.2)
 
 font_name = pygame.font.match_font('arial')
@@ -53,8 +53,9 @@ def draw_shield_bar(surf, x, y, pct, mpct):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((50, 40))
-        self.image.fill(GREEN)
+        self.image = pygame.image.load('pleer.png')
+        # self.image = pygame.Surface((50, 40))
+        # self.image.fill(GREEN)
         self.rect = self.image.get_rect()
         self.rect.centerx = WIDTH / 2
         self.rect.bottom = HEIGHT - 10
@@ -123,7 +124,8 @@ class Mob(pygame.sprite.Sprite):
     def __init__(self, x, y, spx, spy, mob_name, code):
         pygame.sprite.Sprite.__init__(self)
         self.image = mob_name
-        self.image.fill((128, 128, 128))
+        self.image = pygame.image.load('rock.png')
+        # self.image.fill((128, 128, 128))
         self.rect = self.image.get_rect()
         self.radius = int(self.rect.width / 2)
         ##pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
@@ -170,10 +172,13 @@ buff_list = ['max_shield', 'shield', 'more_bullets', 'more_speed', 'more_damage'
 
 class Buff(pygame.sprite.Sprite):
     def __init__(self, center):
+        # self.image = pygame.Surface((150, 40))
+        self.image = pygame.image.load('coyn.png')
+        # self.image.fill(GREEN)
         pygame.sprite.Sprite.__init__(self)
         self.type = random.choice(buff_list)
-        self.image = pygame.Surface((20, 20))
-        self.image.fill(BLUE)
+        # self.image = pygame.Surface((20, 20))
+        # self.image.fill(BLUE)
         self.rect = self.image.get_rect()
         self.rect.center = center
         self.speedy = 2
@@ -188,8 +193,9 @@ class Buff(pygame.sprite.Sprite):
 class Big_Boss(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((60, 50))
-        self.image.fill(RED)
+        self.image = pygame.image.load('bos.png')
+        # self.image = pygame.Surface((60, 50))
+        # self.image.fill(RED)
         self.rect = self.image.get_rect()
         self.rect.center = (WIDTH/2, HEIGHT/4)
         self.health = 500
@@ -235,8 +241,9 @@ class Big_Boss(pygame.sprite.Sprite):
                         self.teleport()
                         self.round_attack()
             else:
-                self.image = pygame.Surface((80, 70))
-                self.image.fill(RED)
+                self.image = pygame.image.load('bosred.png')
+                # self.image = pygame.Surface((80, 70))
+                # self.image.fill(RED)
                 self.tic = pygame.time.get_ticks()
                 self.time = self.tic
                 self.period += 1
@@ -406,7 +413,7 @@ big_boy = Big_Boss()
 all_sprites.add(big_boy)
 for mob in mobs:
     mob.kill()
-pygame.mixer.music.play(loops=-1)
+# pygame.mixer.music.play(loops=-1)
 
 while running and level_counter == 20:
     clock.tick(FPS)
